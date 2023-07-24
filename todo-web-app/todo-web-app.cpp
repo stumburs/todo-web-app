@@ -14,11 +14,11 @@ int task_id_counter = 0;
 
 // Assuming 'time' is the std::time_t value obtained from the previous step
 std::string format_time(const std::time_t& time) {
-	struct tm timeInfo;
-	localtime_s(&timeInfo, &time);
+	struct tm time_info;
+	localtime_s(&time_info, &time);
 
 	std::stringstream ss;
-	ss << std::put_time(&timeInfo, "%Y-%m-%d %H:%M:%S");
+	ss << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S");
 	return ss.str();
 }
 
