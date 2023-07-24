@@ -50,10 +50,11 @@
                 .then(tasks => {
                     taskList.innerHTML = '';
                     for (const taskId in tasks) {
-                        const description = tasks[taskId];
+                        const description = tasks[taskId]["description"];
+                        const time = tasks[taskId]["time"];
                         const listItem = document.createElement("li");
                         listItem.className = "list-group-item";
-                        listItem.textContent = description;
+                        listItem.textContent = time + " " + description;
 
                         const deleteButton = document.createElement("button");
                         deleteButton.className = "btn btn-danger btn-sm float-end";
