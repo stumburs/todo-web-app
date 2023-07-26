@@ -10,7 +10,68 @@ struct Task
 std::vector<Task> tasks;
 std::mutex tasks_mutex;
 
-int task_id_counter = 0;
+int get_latest_task_id(std::string file_name)
+{
+	std::ifstream file(file_name);
+	if (!file.is_open()) {
+		std::cerr << "Error opening file: " << file_name << std::endl;
+		return -1;
+	}
+	nlohmann::ordered_json j = nlohmann::ordered_json::parse(file);
+	file.close();
+
+	int last_id = 0;
+	for (const auto& entry : j.items()) {
+		int id = std::stoi(entry.key());
+		last_id = std::max(last_id, id);
+	}
+	std::cout << "latest id = " << last_id << '\n';
+	return last_id + 1;
+}
+
+int task_id_counter = get_latest_task_id("tasks.json");
+
+void load_tasks_from_file(const std::string& file_name) {
+	std::ifstream file(file_name);
+	if (!file.is_open()) {
+		std::cerr << "Error opening file: " << file_name << std::endl;
+		return;
+	}
+	nlohmann::ordered_json j = nlohmann::ordered_json::parse(file);
+
+	tasks.clear();
+
+	for (const auto& entry : j.items()) {
+		for (const auto& values : entry.value().items())
+		{
+			int id = std::stoi(values.key());
+			std::string description = values.value().at("description");
+			std::string time = values.value().at("time");
+			tasks.push_back({ id, description, time });
+		}
+	}
+
+	file.close();
+}
+
+void save_tasks_to_file(const std::string& file_name) {
+	std::ofstream file(file_name);
+	if (!file.is_open()) {
+		std::cerr << "Error opening file: " << file_name << std::endl;
+		return;
+	}
+
+	nlohmann::ordered_json j;
+
+	for (const auto& task : tasks) {
+		nlohmann::ordered_json j_task;
+		j_task[std::to_string(task.id)]["description"] = task.description;
+		j_task[std::to_string(task.id)]["time"] = task.time;
+		j[task.id] = j_task;
+	}
+	file << j;
+	file.close();
+}
 
 // Assuming 'time' is the std::time_t value obtained from the previous step
 std::string format_time(const std::time_t& time) {
@@ -27,6 +88,7 @@ void add_task(const std::string& description) {
 	std::chrono::system_clock::time_point time_point = std::chrono::system_clock::now();
 	std::string formatted_time = format_time(std::chrono::system_clock::to_time_t(time_point));
 	tasks.push_back({ task_id_counter++, description, formatted_time });
+	save_tasks_to_file("tasks.json"); // Save tasks to JSON file after adding
 }
 
 void delete_task(int task_id) {
@@ -35,10 +97,12 @@ void delete_task(int task_id) {
 		{
 			return task.id == task_id;
 		}), tasks.end());
+	save_tasks_to_file("tasks.json"); // Save tasks to JSON file after deletion
 }
 
 int main()
 {
+	load_tasks_from_file("tasks.json");
 	crow::SimpleApp app;
 	CROW_ROUTE(app, "/")([]()
 		{
